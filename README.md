@@ -1,6 +1,6 @@
-# Google Datastore API builder
+# API Generator for Google Datastore Entities
 
-**datastore-api** is a NodeJS Express routes helper to build RESTful APIs to interact with Google Datastore entities.  
+**datastore-api** is a NodeJS Express routes helper to build RESTful APIs to interact with Google Datastore entities.
 It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) library with its Entities Model design.
 
 ----------
@@ -11,7 +11,10 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Motivation
-While building the [gstore](https://github.com/sebelga/gstore-node) library and at the same time working on an API for a mobile project, I found myself copying a lot of the same code to create all the routes and controllers neede to manage the Datastore entities. I decided then to create this small utiliy to help me quickly build REST routes for CRUD operation on Google Datastore entities and at the same time leave the door opened for more complex logic in the controllers.
+While I was coding the [gstore](https://github.com/sebelga/gstore-node) library I was working on an REST API
+for a mobile project. I found myself copying a lot of the same code to create all the routes and controllers needed to
+manage my Datastore entities. So I decided to create this small utility to help quickly build REST routes for CRUD
+operations on Google Datastore entities and at the same time leave the door opened for more complex logic in the controllers.
 
 ## Installation
 
@@ -19,9 +22,9 @@ While building the [gstore](https://github.com/sebelga/gstore-node) library and 
  npm install gstore-api --save
  ```
 
-## What do we get from it
+## What do I get from it
 
----> **WITHOUT** gstoreApi  
+---> **Without** gstoreApi
 
 
 ```
@@ -127,7 +130,7 @@ module.exports = {
 
 ```
 
----> **WITH** gstoreApi  
+---> **With** gstoreApi
 
 ```
 // server.js
@@ -159,17 +162,17 @@ module.exports = function() { new datastoreApi(BlogPost); }
 
 ### Initiate library
 
-Before creating REST routes you need to initiate the library with `gstoreApi.init({...settings})`  
+Before creating REST routes you need to initiate the library with `gstoreApi.init({...settings})`
 The settings is an object with the following properties:
 
 - router // Express Router instance
 - contexts // Set context for "public" and "private" methods. (optional)
 
-**router** property  
+**router** property
 The Express Router instance
 
-**context** property  
-Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.  
+**context** property
+Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.
 gstoreApi considers that "GET" calls (that don't mutate the resource) are *public* and all others (POST, PUT, PATCH, DELETE) are *private*.
 
 Its default value is an object that does not add any sufix to any route.
@@ -201,7 +204,7 @@ router.use('/private/', yourAuthMiddelware);
 
 Then all the POST, PUT, PATCH and DELETE routes would automatically be routed throught your auth middelware.
 
- 
+
 ## Create Entity API
 
 To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi with the Model.
@@ -237,7 +240,7 @@ The gstoreApi constructor has a second parameter with the following interface
 		updateReplace : {...}, // PUT :id
 		delete        : {...},
 		deleteAll     : {...}  // exec defaults to false (for security)
-		
+
 	}
 }
 
