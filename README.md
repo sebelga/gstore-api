@@ -162,16 +162,16 @@ module.exports = function() { new datastoreApi(BlogPost); }
 
 ### Initiate library
 
-Before creating REST routes you need to initiate the library with `gstoreApi.init({...settings})`
+Before using gstoreApi you need to initiate the library with `gstoreApi.init({...settings})`
 The settings is an object with the following properties:
 
 - router // Express Router instance
-- contexts // Set context for "public" and "private" methods. (optional)
+- contexts // (optional) sets the context for "public" and "private" methods
 
-**router** property
+**router** property  
 The Express Router instance
 
-**context** property
+**context** property  
 Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.
 gstoreApi considers that "GET" calls (that don't mutate the resource) are *public* and all others (POST, PUT, PATCH, DELETE) are *private*.
 
@@ -202,23 +202,23 @@ And you defined an Auth middelware
 router.use('/private/', yourAuthMiddelware);
 ```
 
-Then all the POST, PUT, PATCH and DELETE routes would automatically be routed throught your auth middelware.
+Then all the POST, PUT, PATCH and DELETE routes will automatically be routed through your Auth middelware.
 
 
-## Create Entity API
+## Create an Entity API
 
 To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi with the Model.
 
 ```
 var gstoreApi = require('gstore-api');
-var Model = require('../models/my-model');
+var Model     = require('../models/my-model');
 
 new gstoreApi(Model);
 ```
 
 ### settings
 
-The gstoreApi constructor has a second parameter with the following interface
+But if you need more fine-tuning, the gstoreApi constructor has a "settings" parameter with the following interface
 
 ```
 {
