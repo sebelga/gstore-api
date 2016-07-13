@@ -1,0 +1,43 @@
+{
+  "name": "gstore-api",
+  "version": "0.1.0",
+  "description": "gstore-api is a NodeJS Express route builder that help designing RESTful APIs to manage Google Datastore entities.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test --recursive",
+    "coverage": "istanbul cover _mocha -- -R spec --recursive",
+    "coveralls": "istanbul cover _mocha --report lcovonly -- -R spec --recursive && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage"
+  },
+  "engines": {
+    "node": ">=4.0"
+  },
+  "keywords": [
+    "Google Datastore",
+    "API design",
+    "gstore-node",
+    "Node JS"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sebelga/gstore-api.git"
+  },
+  "author": "Sébastien Loix",
+  "license": "ISC",
+  "dependencies": {
+    "arrify": "^1.0.1",
+    "extend": "^3.0.0",
+    "is": "^3.1.0",
+    "pluralize": "^3.0.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.9.0",
+    "babel-preset-es2015": "^6.9.0",
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.9",
+    "gstore-node": "^0.4.0",
+    "istanbul": "^0.4.3",
+    "mocha": "^2.4.5",
+    "mocha-lcov-reporter": "^1.2.0",
+    "sinon": "^1.17.4"
+  }
+}
