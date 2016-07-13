@@ -8,6 +8,14 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+- [Motivation](#motivation)
+- [Installation](#installation)
+- [What do I get from it](#what-do-i-get-from-it)
+- [Getting started](#getting-started)
+  - [Initiate library](#initiate-library)
+- [Create an Entity API](#create-an-entity-api)
+  - [settings](#settings)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Motivation
@@ -168,10 +176,10 @@ The settings is an object with the following properties:
 - router // Express Router instance
 - contexts // (optional) sets the context for "public" and "private" methods
 
-**router** property  
+**router** property
 The Express Router instance
 
-**context** property  
+**context** property
 Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.
 gstoreApi considers that "GET" calls (that don't mutate the resource) are *public* and all others (POST, PUT, PATCH, DELETE) are *private*.
 
