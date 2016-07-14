@@ -13,9 +13,10 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 - [Installation](#installation)
 - [What do I get from it](#what-do-i-get-from-it)
 - [Getting started](#getting-started)
-  - [Initiate library](#initiate-library)
-- [Create an Entity API](#create-an-entity-api)
-  - [settings](#settings)
+  - [Initiate](#initiate)
+- [Create a REST API for an Entity](#create-a-rest-api-for-an-entity)
+  - [Basic](#basic)
+  - [Additional settings](#additional-settings)
     - [path](#path)
     - [ancestors](#ancestors)
     - [op](#op)
@@ -23,8 +24,8 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Motivation
-While I was coding the [gstore](https://github.com/sebelga/gstore-node) library I was working on an REST API
-for a mobile project. I found myself copying a lot of the same code to create all the routes and controllers needed to manage my Datastore entities. So I decided to create this small utility to help me create all the REST routes for CRUD operations over the Google Datastore entities.
+While I was working on the [gstore-node](https://github.com/sebelga/gstore-node) library I was building a REST API
+for a mobile project. I found myself copying a lot of the same code over and over to create all the routes and controllers needed to manage my Datastore entities. So I decided to create this small utility to help me generate all the REST routes for CRUD operations on the Google Datastore entities.
 
 ## Installation
 
@@ -154,7 +155,7 @@ gstoreApi.init({
 
 ```
 
-The next file is all you need to have a full CRUD REST API of a [gstore-node BlogPost Model](https://github.com/sebelga/gstore-node#model)
+The next file is all you need to have a REST API for a "BlogPost" Datastore Entity
 
 ```
 // lib
@@ -163,7 +164,7 @@ var gstoreApi = require('gstore-api');
 // Model (gstore-node)
 var BlogPost = require('../models/blogPost');
 
-module.exports = function() { 
+module.exports = function() {
 	// --> REST API for Model
 	new datastoreApi(BlogPost);
 }
@@ -173,7 +174,7 @@ module.exports = function() {
 
 ## Getting started
 
-### Initiate library
+### Initiate
 
 Before using gstoreApi you need to initiate the library with `gstoreApi.init({...settings})`
 The settings is an object with the following properties:
@@ -182,13 +183,13 @@ The settings is an object with the following properties:
 - simplifyResult // (optional) default: true
 - contexts // (optional)
 
-**router**  
+**router**
 The Express Router instance
 
-**simplifyResult**  
+**simplifyResult**
 Define globally if the response format is simplified or not. See explanation in [gstore-node docs](https://github.com/sebelga/gstore-node#queries)
 
-**context**  
+**context**
 Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.
 gstoreApi considers that "GET" calls (that don't mutate the resource) are *public* and all others (POST, PUT, PATCH, DELETE) are *private*.
 
@@ -222,9 +223,10 @@ router.use('/private/', yourAuthMiddelware);
 Then all the POST, PUT, PATCH and DELETE routes will automatically be routed through your Auth middelware.
 
 
-## Create an Entity API
+## Create a REST API for an Entity
 
-To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi with the Model.
+### Basic
+To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi and pass the Model.
 
 ```
 var gstoreApi = require('gstore-api');
@@ -233,12 +235,12 @@ var Model     = require('../models/my-model');
 new gstoreApi(Model);
 ```
 
-### settings
+### Additional settings
 
 If you need some fine-tuning, the gstoreApi constructor has a second parameter where you can configure the following settings
 
 ```
-// NOTE: All the settings below are OPTIONAL. Just define what you need to tweak.
+// NOTE: All the settings below are OPTIONAL. You only need to set the one you need to tweak.
 
 {
 	path: '/end-point', // if not specified will be automatically generated (see below)
@@ -259,8 +261,8 @@ If you need some fine-tuning, the gstoreApi constructor has a second parameter w
 		},
 		get           : {...}  // same as above
 		create        : {...},
-		udpatePatch   : {...}, // PATCH :id
-		updateReplace : {...}, // PUT :id
+		udpatePatch   : {...}, // PATCH verb
+		updateReplace : {...}, // PUT verb
 		delete        : {...},
 		deleteAll     : {...}  // exec defaults to false (for security)
 
@@ -270,24 +272,24 @@ If you need some fine-tuning, the gstoreApi constructor has a second parameter w
 ```
 
 #### path
-If not set the path to the resource is **auto-generated** with the following rules:
+If you don't pass the path for the resource it will be **auto-generated** with the following rules:
 
-- start with lowercase
+- lowercase
 - dash for camelCase
-- pluralize entity Kind
+- pluralize the entity Kind
 
 ```
 Example:
 
 entity Kind        path
 ----------------------------
-'BlogPost' --> '/blog-posts'  
+'BlogPost' --> '/blog-posts'
 'Query'    --> '/queries'
 ```
 
 
 #### ancestors
-You can pass here one or several ancestors (entity Kinds) for the Model. The path create follows the same rules as mentioned above.
+You can set here one or several ancestors (Entity Kinds) for the current Model. The path that is generated follows the same rules as the path setting above.
 
 ```
 // gstore-node Model
@@ -327,20 +329,19 @@ Operations can be any of
 - list (GET all entities)
 - get  (GET one entity)
 - create (POST new entity)
-- updatePatch   (PATCH update entity) --> only update properties sent
+- updatePatch   (PATCH update entity) --> only update the properties sent in body
 - updateReplace (PUT to update entity) --> replace all data for entity
 - delete (DELETE one entity)
 - deleteAll (DELETE all entities)
 
-The all have the **same configuration settings** with the following properties  
+They all have the **same configuration settings** with the following properties
 
 
-
-**fn**  
+**fn**
 Controller function to call. If you don't pass it it will default to get and return the entity from Google Datastore.
 
-**middelware**  
-You can specify a custom middelware for any operation. You might one for example to specify a middleware for file upload for example.
+**middelware**
+You can specify a custom middelware for any operation. You might want, for example, to add a middleware to upload files.
 
 ```
 // Upload file with multer package
@@ -369,15 +370,15 @@ POST /images
 
 ```
 
-**exec**  
-This property defines if the route for the operation is created (and executed) or not. Defaults to **true** except for "*deleteAll*" that you must manually set to true for security reason.
+**exec**
+You define with this property to execute or not this operation on the entity Model. Defaults to **true** except for "*deleteAll*" operation that you must manually set to true for security reason.
 
-**options**  
+**options**
 
-- **simplifyResult**: for list op it will pass this setting to the Model.list() action. And for get, create, and update(s) operation it will call entity.plain()
-- **readAll**: (default: false) in case you have defined some properties in your Schema with read:false ([see the doc](https://github.com/sebelga/gstore-node#read)), they won't show up in the response. If you want them in the response set this property to true.
+- **simplifyResult**: for the list() operation it will forward this setting to the Model.list() action. For get, create, and update(s) operations it will call entity.plain() on the response.
+- **readAll**: (default: false) in case you have set the **read setting** on some of your Schema's properties to false ([see the doc](https://github.com/sebelga/gstore-node#read)), these won't show up in the response data unless you set "readAll" to true.
 
-**path**  
-You can add here some custom prefix or sufix to the path.  
+**path**
+You can add here some custom prefix or suffix to the path.
 Important: This will override the settings from the global "contexts".
 
