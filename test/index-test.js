@@ -116,7 +116,8 @@ describe('Datastore API', function() {
                     public:'/public',
                     private : '/private'
                 },
-                router: router
+                router: router,
+                simplifyResult : true
             };
 
             gstoreApi.init(settings);
@@ -126,11 +127,11 @@ describe('Datastore API', function() {
     });
 
     describe('constructor', () => {
-        it('should throw an error if no defaultContext set', () => {
+        it('should throw an error if gstoreApi not initialized', () => {
             delete require.cache[path.resolve('lib/index.js')];
             var gstoreApi = require('../lib');
 
-            let fn = () => new gstoreApi(Model, {path:'/users'});
+            let fn = () => new gstoreApi(Model);
 
             expect(fn).throw(Error);
         });
@@ -862,7 +863,7 @@ describe('Datastore API', function() {
                 ancestors : ['GrandFather', 'Dad']
             });
 
-            expect(router.route.getCall(1).args[0]).equal('/public/grand-father/:anc0ID/dad/:anc1ID/users/:id');
+            expect(router.route.getCall(1).args[0]).equal('/public/grand-fathers/:anc0ID/dads/:anc1ID/users/:id');
         });
 
         it('should add ancestors to path (2)', () => {
@@ -871,7 +872,7 @@ describe('Datastore API', function() {
                 ancestors : ['grand-Father', 'MyDad-1']
             });
 
-            expect(router.route.getCall(1).args[0]).equal('/public/grand-father/:anc0ID/my-dad-1/:anc1ID/users/:id');
+            expect(router.route.getCall(1).args[0]).equal('/public/grand-fathers/:anc0ID/my-dad-1S/:anc1ID/users/:id');
         });
 
         it('should add prefix to path', () => {

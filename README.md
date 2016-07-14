@@ -1,17 +1,26 @@
-# Google Datastore API builder
+# API Generator for Google Datastore Entities
 
-**datastore-api** is a NodeJS Express routes helper to build RESTful APIs to interact with Google Datastore entities.  
-It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) library with its Entities Model design.
+**datastore-api** is a NodeJS Express routes helper to build RESTful APIs to interact with Google Datastore entities.
+It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) library and its Entities Modeling pattern.
 
 ----------
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+- [Motivation](#motivation)
+- [Installation](#installation)
+- [What do I get from it](#what-do-i-get-from-it)
+- [Getting started](#getting-started)
+  - [Initiate library](#initiate-library)
+- [Create an Entity API](#create-an-entity-api)
+  - [settings](#settings)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Motivation
-While building the [gstore](https://github.com/sebelga/gstore-node) library and at the same time working on an API for a mobile project, I found myself copying a lot of the same code to create all the routes and controllers neede to manage the Datastore entities. I decided then to create this small utiliy to help me quickly build REST routes for CRUD operation on Google Datastore entities and at the same time leave the door opened for more complex logic in the controllers.
+While I was coding the [gstore](https://github.com/sebelga/gstore-node) library I was working on an REST API
+for a mobile project. I found myself copying a lot of the same code to create all the routes and controllers needed to manage my Datastore entities. So I decided to create this small utility to help me create all the REST routes for CRUD operations over the Google Datastore entities.
 
 ## Installation
 
@@ -19,9 +28,9 @@ While building the [gstore](https://github.com/sebelga/gstore-node) library and 
  npm install gstore-api --save
  ```
 
-## What do we get from it
+## What do I get from it
 
----> **WITHOUT** gstoreApi  
+**Without** gstoreApi
 
 
 ```
@@ -117,17 +126,18 @@ function deleteAll(req, res) {
 }
 
 module.exports = {
-	list:      list,
-	get:       get,
-	create:    create,
-	update:    update,
-	delete:    deleteResource,
-	deleteAll: deleteAll
+	list:          list,
+	get:           get,
+	create:        create,
+	updatePatch:   updatePatch,
+	updateReplace: updateReplace,
+	delete:        deleteResource,
+	deleteAll:     deleteAll
 };
 
 ```
 
----> **WITH** gstoreApi  
+**With** gstoreApi
 
 ```
 // server.js
@@ -149,8 +159,10 @@ var gstoreApi = require('gstore-api');
 // Model (gstore-node)
 var BlogPost = require('../models/blogPost');
 
-// --> REST API for Model
-module.exports = function() { new datastoreApi(BlogPost); }
+module.exports = function() { 
+	// --> REST API for Model
+	new datastoreApi(BlogPost);
+}
 
 ```
 
@@ -159,17 +171,21 @@ module.exports = function() { new datastoreApi(BlogPost); }
 
 ### Initiate library
 
-Before creating REST routes you need to initiate the library with `gstoreApi.init({...settings})`  
+Before using gstoreApi you need to initiate the library with `gstoreApi.init({...settings})`
 The settings is an object with the following properties:
 
-- router // Express Router instance
-- contexts // Set context for "public" and "private" methods. (optional)
+- router
+- simplifyResult // (optional) default: true
+- contexts // (optional)
 
-**router** property  
+**router**  
 The Express Router instance
 
-**context** property  
-Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.  
+**simplifyResult**  
+Define globally if the response format is simplified or not. See explanation in [gstore-node docs](https://github.com/sebelga/gstore-node#queries)
+
+**context**  
+Contexts is an objects with 2 properties: "**public**" and "**private**" that specify a sufix for the routes to be generated.
 gstoreApi considers that "GET" calls (that don't mutate the resource) are *public* and all others (POST, PUT, PATCH, DELETE) are *private*.
 
 Its default value is an object that does not add any sufix to any route.
@@ -199,25 +215,27 @@ And you defined an Auth middelware
 router.use('/private/', yourAuthMiddelware);
 ```
 
-Then all the POST, PUT, PATCH and DELETE routes would automatically be routed throught your auth middelware.
+Then all the POST, PUT, PATCH and DELETE routes will automatically be routed through your Auth middelware.
 
- 
-## Create Entity API
+
+## Create an Entity API
 
 To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi with the Model.
 
 ```
 var gstoreApi = require('gstore-api');
-var Model = require('../models/my-model');
+var Model     = require('../models/my-model');
 
 new gstoreApi(Model);
 ```
 
 ### settings
 
-The gstoreApi constructor has a second parameter with the following interface
+If you need some fine-tuning, the gstoreApi constructor has a second parameter where you can configure the following settings
 
 ```
+// NOTE: All the settings below are OPTIONAL. Just define what you need to tweak.
+
 {
 	path: '/end-point', // if not specified will be automatically generated (see below)
 	ancestors : 'Dad', // can also ben an array ['GranDad', 'Dad']
@@ -225,7 +243,11 @@ The gstoreApi constructor has a second parameter with the following interface
 		list : {
 			fn         : someController.someMethod,
 			middelware : someMiddelware,
-			exec       : true, // execute or no this operation
+			exec       : true, (default true)
+			options    : {
+				simplifyResult : true,  (default to settings in init())
+				readAll        : false, (default false)
+			},
 			path : {
 				prefix : 'additional-prefix' // can also be an <Array>.
 				sufix  : 'additional-sufix' // not sure why I added this feature, but it's there :)
@@ -237,10 +259,121 @@ The gstoreApi constructor has a second parameter with the following interface
 		updateReplace : {...}, // PUT :id
 		delete        : {...},
 		deleteAll     : {...}  // exec defaults to false (for security)
-		
+
 	}
 }
 
 ```
 
+#### path
+If not set the path to the resource is **auto-generated** with the following rules:
+
+- start with lowercase
+- dash for camelCase
+- pluralize entity Kind
+
+```
+Example:
+
+entity Kind        path
+----------------------------
+'BlogPost' --> '/blog-posts'  
+'Query'    --> '/queries'
+```
+
+
+#### ancestors
+You can pass here one or several ancestors (entity Kinds) for the Model. The path create follows the same rules as mentioned above.
+
+```
+// gstore-node Model
+var Comment = require('./models/comment.model');
+
+new gstoreApi(Comment, {
+	ancestors : 'BlogPost'
+});
+
+// Generated the folowing Express 2 routes with their corresponding verbs:
+
+/blog-posts/:anc0ID/comments
+/blog-posts/:anc0ID/comments/:id
+
+
+// To list all the comments entities with the ancestors path ['BlogPost', 123]
+// you just need to make a call to
+
+GET /blog-posts/123/comments
+
+// You can pass an array
+new gstoreApi(Comment, {
+	ancestors : ['Blog', 'BlogPost']
+});
+
+// And generate the following routes
+
+/blogs/:anc0ID/blog-posts/:anc1ID/comments
+/blogs/:anc0ID/blog-posts/:anc1ID/comments/:id
+
+```
+
+#### op
+
+Operations can be any of
+
+- list (GET all entities)
+- get  (GET one entity)
+- create (POST new entity)
+- updatePatch   (PATCH update entity) --> only update properties sent
+- updateReplace (PUT to update entity) --> replace all data for entity
+- delete (DELETE one entity)
+- deleteAll (DELETE all entities)
+
+The all have the **same configuration settings** with the following properties  
+
+
+
+**fn**  
+Controller function to call. If you don't pass it it will default to get and return the entity from Google Datastore.
+
+**middelware**  
+You can specify a custom middelware for any operation. You might one for example to specify a middleware for file upload for example.
+
+```
+// Upload file with multer package
+var multer  = require('multer');
+var storage = multer.memoryStorage();
+var upload  = multer({storage: storage});
+
+// gstore-node model
+var Image = require('./models/image.model');
+
+// Image Controller
+var imageController = require('./controllers/image.controller');
+
+// Build API
+new gstoreApi(Image, {
+	op : {
+		create : {
+		    middelware : upload.single('file'),
+		    fn : imageController.create  // Add a custom logic just for this POST
+		}
+	}
+});
+
+// The following will have the middelware added and call the custom controller method
+POST /images
+
+```
+
+**exec**  
+This property defines if the route for the operation is created (and executed) or not. Defaults to **true** except for "*deleteAll*" that you must manually set to true for security reason.
+
+**options**  
+
+- **simplifyResult**: for list op it will pass this setting to the Model.list() action. And for get, create, and update(s) operation it will call entity.plain()
+- **readAll**: (default: false) in case you have defined some properties in your Schema with read:false ([see the doc](https://github.com/sebelga/gstore-node#read)), they won't show up in the response. If you want them in the response set this property to true.
+
+**path**  
+You can add here some custom prefix or sufix to the path.  
+Important: This will override the settings from the global "contexts".
 

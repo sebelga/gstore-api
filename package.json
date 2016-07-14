@@ -12,10 +12,12 @@
     "node": ">=4.0"
   },
   "keywords": [
-    "Google Datastore",
-    "API design",
+    "google datastore",
+    "google cloud",
+    "RESTful API",
+    "data modeling",
     "gstore-node",
-    "Node JS"
+    "node.js"
   ],
   "repository": {
     "type": "git",
@@ -27,14 +29,15 @@
     "arrify": "^1.0.1",
     "extend": "^3.0.0",
     "is": "^3.1.0",
-    "pluralize": "^3.0.0"
+    "pluralize": "^3.0.0",
+    "string": "^3.3.1"
   },
   "devDependencies": {
     "babel-cli": "^6.9.0",
     "babel-preset-es2015": "^6.9.0",
     "chai": "^3.5.0",
     "coveralls": "^2.11.9",
-    "gstore-node": "^0.4.0",
+    "gstore-node": "^0.5.0",
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
     "mocha-lcov-reporter": "^1.2.0",
