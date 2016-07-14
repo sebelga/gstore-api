@@ -8,6 +8,7 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Motivation](#motivation)
 - [Installation](#installation)
 - [What do I get from it](#what-do-i-get-from-it)
@@ -15,6 +16,9 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
   - [Initiate library](#initiate-library)
 - [Create an Entity API](#create-an-entity-api)
   - [settings](#settings)
+    - [path](#path)
+    - [ancestors](#ancestors)
+    - [op](#op)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
