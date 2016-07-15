@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/gstore-api.svg)](https://badge.fury.io/js/gstore-api) [![Build Status](https://travis-ci.org/sebelga/gstore-api.svg?branch=master)](https://travis-ci.org/sebelga/gstore-api) [![Coverage Status](https://coveralls.io/repos/github/sebelga/gstore-api/badge.svg?branch=master)](https://coveralls.io/github/sebelga/gstore-api?branch=master)  
 
 **datastore-api** is a NodeJS Express routes helper to build RESTful APIs to interact with Google Datastore entities.
-It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) library and its Entities Modeling pattern.
+It is built on top of [gcloud-node](https://github.com/GoogleCloudPlatform/gcloud-node) and the [gstore-node](https://github.com/sebelga/gstore-node) library with its Entities Modeling definition.
 
 ----------
 
