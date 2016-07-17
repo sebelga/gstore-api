@@ -77,7 +77,8 @@ describe('Datastore API', function() {
             params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'},
             query : {},
             body:{title:'Blog Title'},
-            get : () => 'http://localhost'
+            get : () => 'http://localhost',
+            originalUrl : ''
         };
         res = {
             status:() => {
