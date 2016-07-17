@@ -8,13 +8,18 @@ It is built on top of the [gstore-node](https://github.com/sebelga/gstore-node) 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Motivation](#motivation)
 - [Installation](#installation)
 - [What do I get from it](#what-do-i-get-from-it)
 - [Getting started](#getting-started)
   - [Initiate library](#initiate-library)
-- [Create an Entity API](#create-an-entity-api)
+- [Create an API for an Entity](#create-an-api-for-an-entity)
   - [settings](#settings)
+    - [path](#path)
+    - [ancestors](#ancestors)
+    - [op](#op)
+      - [op settings](#op-settings)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -223,7 +228,7 @@ router.use('/private/', yourAuthMiddelware);
 Then all the POST, PUT, PATCH and DELETE routes will automatically be routed through your Auth middelware.
 
 
-## Create an Entity API
+## Create an API for an Entity
 
 To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi and pass the gstore-node Model.
 
@@ -313,7 +318,7 @@ new gstoreApi(Comment, {
 
 Operations can be any of
 
-- list (GET all entities) --> call the list() query shortcut on Model
+- list (GET all entities) --> call the list() query shortcut on Model. [Documentation here](https://github.com/sebelga/gstore-node#list).
 - get  (GET one entity)
 - create (POST new entity)
 - updatePatch   (PATCH update entity) --> only update properties sent
@@ -321,7 +326,8 @@ Operations can be any of
 - delete (DELETE one entity)
 - deleteAll (DELETE all entities)
 
-The **list** operation calls the same method from the gstore-node shortcut query "list" as explained in the [documentation here](https://github.com/sebelga/gstore-node#list).
+**Link Header**  
+The **list** operation adds a [Link Header](https://tools.ietf.org/html/rfc5988#page-6) (rel="next") with the link to the next page to fetch if there are more result.
 
 
 ##### op settings
@@ -395,6 +401,7 @@ Extra options:
 - **select**
 - **ancestors** (except if already defined in global init())
 - **filters**
+
 
 **path**  
 You can add here some custom prefix or suffix to the path.  

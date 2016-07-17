@@ -73,7 +73,12 @@ describe('Datastore API', function() {
 
         Model = gstore.model('BlogPost', schema);
 
-        req = {params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'}, body:{title:'Blog Title'}};
+        req = {
+            params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'},
+            query : {},
+            body:{title:'Blog Title'},
+            get : () => 'http://localhost'
+        };
         res = {
             status:() => {
                 return {json:() => {}}
@@ -224,6 +229,15 @@ describe('Datastore API', function() {
             expect(res.set.getCall(0).args[0]).equal('Link');
 
             res.set.restore();
+        });
+
+        it('should add start setting if pageCursor in request query', () => {
+            req.query.pageCursor = 'abcd1234';
+            var dsApi = new gstoreApi(Model);
+
+            dsApi.list(req, res);
+
+            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:false, start:'abcd1234'});
         });
 
         it('should read options', () => {
