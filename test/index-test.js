@@ -73,11 +73,18 @@ describe('Datastore API', function() {
 
         Model = gstore.model('BlogPost', schema);
 
-        req = {params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'}, body:{title:'Blog Title'}};
+        req = {
+            params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'},
+            query : {},
+            body:{title:'Blog Title'},
+            get : () => 'http://localhost',
+            originalUrl : ''
+        };
         res = {
             status:() => {
                 return {json:() => {}}
             },
+            set : () => {},
             json:() => {}
         };
 
@@ -112,6 +119,7 @@ describe('Datastore API', function() {
 
         it('should merge settings passed', () => {
             var settings = {
+                host: '',
                 contexts : {
                     public:'/public',
                     private : '/private'
@@ -187,9 +195,9 @@ describe('Datastore API', function() {
                     args.push(arguments[i]);
                 }
                 cb       = args.pop();
-                settings = args.length > 0 ? args[0] : undefined;
-
-                return cb(null, entities);
+                return cb(null, {
+                    entities : entities
+                });
             });
         });
 
@@ -198,7 +206,7 @@ describe('Datastore API', function() {
         });
 
         it('should read from general settings', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true}, router);
+            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true});
 
             dsApi.list(req, res);
 
@@ -206,12 +214,46 @@ describe('Datastore API', function() {
             expect(res.json.getCall(0).args[0]).equal(entities);
         });
 
+        it('should set Link Header if nextPageCursor', () => {
+            Model.list.restore();
+            sinon.stub(Model, 'list', function(settings, cb) {
+                return cb(null, {
+                    nextPageCursor : 'abc123'
+                });
+            });
+            sinon.spy(res, 'set');
+            var dsApi = new gstoreApi(Model);
+
+            dsApi.list(req, res);
+
+            expect(res.set.called).be.true;
+            expect(res.set.getCall(0).args[0]).equal('Link');
+
+            res.set.restore();
+        });
+
+        it('should add start setting if pageCursor in request query', () => {
+            req.query.pageCursor = 'abcd1234';
+            var dsApi = new gstoreApi(Model);
+
+            dsApi.list(req, res);
+
+            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:false, start:'abcd1234'});
+        });
+
         it('should read options', () => {
             var settings = {
                 path:'/users',
                 op : {
                     list : {
-                        options : {simplifyResult:true}
+                        options : {
+                            simplifyResult:true,
+                            limit : 13,
+                            order : {property: 'title', descending:true},
+                            select : 'name',
+                            ancestors : ['MyDad'],
+                            filters : ['paid', true]
+                        }
                     }
                 }
             };
@@ -219,13 +261,20 @@ describe('Datastore API', function() {
 
             dsApi.list(req, res);
 
-            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:true});
+            expect(Model.list.getCall(0).args[0]).deep.equal(settings.op.list.options);
         });
 
         it('should add ancestors to query', () => {
             var settings1 = {
                 path:'/users',
-                ancestors : 'Dad'
+                ancestors : 'Dad',
+                op : {
+                    list : {
+                        options : {
+                            ancestors : ['MyDad']
+                        }
+                    }
+                }
             };
             var dsApi1 = new gstoreApi(Model, settings1, router);
 
@@ -901,12 +950,12 @@ describe('Datastore API', function() {
             expect(router.route.getCall(3).args[0]).equal('/myprefix2/users/:id');
         });
 
-        it('should add sufix to path', () => {
+        it('should add suffix to path', () => {
             var dsApi = new gstoreApi(Model, {
                 path:'/users',
                 op : {
-                    list: {path:{sufix:'/mysufix'}},
-                    get:  {path:{sufix:'/mysufix'}}
+                    list: {path:{suffix:'/mysufix'}},
+                    get:  {path:{suffix:'/mysufix'}}
                 }
             });
             expect(router.route.getCall(0).args[0]).equal('/public/users/mysufix');
