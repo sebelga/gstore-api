@@ -1,6 +1,6 @@
 {
   "name": "gstore-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "gstore-api is a NodeJS Express route builder that help designing RESTful APIs to manage Google Datastore entities.",
   "main": "index.js",
   "scripts": {
