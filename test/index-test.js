@@ -231,7 +231,14 @@ describe('Datastore API', function() {
                 path:'/users',
                 op : {
                     list : {
-                        options : {simplifyResult:true}
+                        options : {
+                            simplifyResult:true,
+                            limit : 13,
+                            order : {property: 'title', descending:true},
+                            select : 'name',
+                            ancestors : ['MyDad'],
+                            filters : ['paid', true]
+                        }
                     }
                 }
             };
@@ -239,13 +246,20 @@ describe('Datastore API', function() {
 
             dsApi.list(req, res);
 
-            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:true});
+            expect(Model.list.getCall(0).args[0]).deep.equal(settings.op.list.options);
         });
 
         it('should add ancestors to query', () => {
             var settings1 = {
                 path:'/users',
-                ancestors : 'Dad'
+                ancestors : 'Dad',
+                op : {
+                    list : {
+                        options : {
+                            ancestors : ['MyDad']
+                        }
+                    }
+                }
             };
             var dsApi1 = new gstoreApi(Model, settings1, router);
 

@@ -225,7 +225,7 @@ Then all the POST, PUT, PATCH and DELETE routes will automatically be routed thr
 
 ## Create an Entity API
 
-To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi with the Model.
+To its simplest form, to create an API for a Model you just need to create a new instance of the gstoreApi and pass the gstore-node Model.
 
 ```js
 var gstoreApi = require('gstore-api');
@@ -242,10 +242,10 @@ If you need some fine-tuning, the gstoreApi constructor has a second parameter w
 // NOTE: All the settings below are OPTIONAL. Just define what you need to tweak.
 
 {
-	path: '/end-point', // if not specified will be automatically generated (see below)
-	ancestors : 'Dad', // can also ben an array ['GranDad', 'Dad']
+	path: '/end-point', // if not specified will be auto-generated (see below)
+	ancestors : 'Dad', // can also ben an <Array> ['GranDad', 'Dad']
 	op : {
-		list          : {...op setting see below},
+		list          : {... see op setting below},
 		get           : {...}
 		create        : {...},
 		udpatePatch   : {...}, // PATCH :id
@@ -261,7 +261,7 @@ If you need some fine-tuning, the gstoreApi constructor has a second parameter w
 #### path
 If not set the path to the resource is **auto-generated** with the following rules:
 
-- start with lowercase
+- lowercase
 - dash for camelCase
 - pluralize entity Kind
 
@@ -346,7 +346,7 @@ Each operation has the **same configuration settings** with the following proper
 
 
 **fn**  
-Custom Controller method to call. Like any Express Router method, it is passed the **request** and **response** object like this `function controllerMethod(req, res) {...}`
+Custom Controller method. Like any Express Router method, it has the **request** and **response** parameters.   `function controllerMethod(req, res) {...}`
 
 
 **middelware**  
@@ -393,13 +393,13 @@ Extra options:
 - **limit**
 - **order**
 - **select**
-- **ancestors** (except if you already defined them in init())
+- **ancestors** (except if already defined in global init())
 - **filters**
 
 **path**  
 You can add here some custom prefix or suffix to the path.  
 
-If you pass an **\<Array\>** of prefix like this `['', '/private', '/some-other-route']`, this will create 3 endPoints to access your entity and so let you define 3 different middelwares if needed. You will then have to define a custom Controller method (fn) to deal with these differents scenarios and customize the data saved or returned.
+If you pass an **\<Array\>** of prefix like this `['', '/private', '/some-other-route']`, this will create 3 endPoints to access your entity and so let you define 3 different middelwares if needed. You will then have to define a custom Controller method (fn) to deal with these differents scenarios and customize the data saved or returned. For example: outputing more data if the user is authenticated.  
 
-Important: The path setting that you set here will override global "contexts" settings.
+Important: This "path" setting will override the global "contexts" settings.
 
