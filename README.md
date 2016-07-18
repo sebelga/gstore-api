@@ -72,7 +72,7 @@ module.exports = BlogPostRoutes;
 ```js
 // blogPost.controller.js
 
-// BlogPost is a Datastools Model
+// BlogPost is a gstore-node Model
 var BlogPost = require('../models/blogPost');
 
 /*
