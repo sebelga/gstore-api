@@ -1,31 +1,35 @@
-/*jshint -W030 */
+/* eslint-env mocha */
 
 'use strict';
 
-var chai    = require('chai');
-var expect  = chai.expect;
-var sinon   = require('sinon');
-var path    = require('path');
+const chai = require('chai');
+const sinon = require('sinon');
+const path = require('path');
+const extend = require('extend');
+const gstore = require('gstore-node');
+let gstoreApi = require('../lib')();
 
-var gstore    = require('gstore-node');
-var gstoreApi = require('../lib');
+require('sinon-as-promised');
 
-var errorsHandler = require('../lib/errorsHandler');
+const errorsHandler = require('../lib/errorsHandler');
 
-var apiRoute = {
-    get :  function() {return true;},
-    post:  function() {return true;},
-    put:   function() {return true;},
-    patch: function() {return true;},
-    delete:function() {return true;}
+const expect = chai.expect;
+const assert = chai.assert;
+const apiRoute = {
+    get() { return true; },
+    post() { return true; },
+    put() { return true; },
+    patch() { return true; },
+    delete() { return true; },
 };
-
-var router = {
+const router = {
     name: 'router',
-    route : function() {
+    route() {
         return apiRoute;
-    }
+    },
 };
+
+let apiBuilder = gstoreApi.express(router);
 
 function Datastore() {
     this.key = () => {};
@@ -33,59 +37,48 @@ function Datastore() {
 
 gstore.connect(new Datastore());
 
-gstoreApi.init({
-    contexts : {
-        public: '/public',
-        private: '/private'
-    },
-    router : router
-});
+describe('Datastore API', () => {
+    let schema;
+    let Model;
+    let req;
+    let res;
 
-describe('Datastore API', function() {
-    var schema;
-    var Model;
-    var req;
-    var res;
-
-    var entity = {
-        plain : () => {
-            return {id:123}
-        }
+    const entity = {
+        plain: () => ({ id: 123 }),
     };
 
-    var apiDefaultSettings = {
-        path : '/users'
+    const apiDefaultSettings = {
+        path: '/users',
     };
 
-    beforeEach('Init Model and Schema', function() {
+    beforeEach('Init Model and Schema', () => {
         sinon.spy(router, 'route');
 
-        gstore.models       = {};
+        gstore.models = {};
         gstore.modelSchemas = {};
 
         schema = new gstore.Schema({
-            title : {type:'string'}
+            title: { type: 'string' },
         }, {
-            queries : {
-                simplifyResult : false
-            }
+            queries: {
+                showKey: true,
+            },
         });
 
         Model = gstore.model('BlogPost', schema);
 
         req = {
-            params:{id:123, anc0ID:'ancestor1', anc1ID:'ancestor2'},
-            query : {},
-            body:{title:'Blog Title'},
-            get : () => 'http://localhost',
-            originalUrl : ''
+            params: { id: 123, anc0ID: 'ancestor1', anc1ID: 'ancestor2' },
+            query: {},
+            body: { title: 'Blog Title' },
+            get: () => 'http://localhost',
+            originalUrl: '',
         };
+
         res = {
-            status:() => {
-                return {json:() => {}}
-            },
-            set : () => {},
-            json:() => {}
+            status: () => ({ json: () => {}, send: () => {} }),
+            set: () => {},
+            json: () => {},
         };
 
         sinon.spy(res, 'json');
@@ -93,61 +86,26 @@ describe('Datastore API', function() {
         sinon.spy(entity, 'plain');
     });
 
-    afterEach(function() {
+    afterEach(() => {
         router.route.restore();
         res.json.restore();
         errorsHandler.rpcError.restore();
         entity.plain.restore();
     });
 
-    describe('init()', () => {
-        it('should throw an error is no settings passed', () => {
-            var fn1 = () => gstoreApi.init();
-            var fn2 = () => gstoreApi.init('string');
+    describe('express()', () => {
+        it('should throw Error if not passing router', () => {
+            const fun = () => gstoreApi.express();
 
-            expect(fn1).throw(Error);
-            expect(fn2).throw(Error);
-        });
-
-        it('should throw an error is no router passed or not an Express router', () => {
-            var fn1 = () => gstoreApi.init({});
-            var fn2 = () => gstoreApi.init({router:function() {}});
-
-            expect(fn1).throw(Error);
-            expect(fn2).throw(Error);
-        });
-
-        it('should merge settings passed', () => {
-            var settings = {
-                host: '',
-                contexts : {
-                    public:'/public',
-                    private : '/private'
-                },
-                router: router,
-                simplifyResult : true
-            };
-
-            gstoreApi.init(settings);
-
-            expect(gstoreApi.defaultSettings).deep.equal(settings);
+            expect(fun).throw();
         });
     });
 
-    describe('constructor', () => {
-        it('should throw an error if gstoreApi not initialized', () => {
-            delete require.cache[path.resolve('lib/index.js')];
-            var gstoreApi = require('../lib');
-
-            let fn = () => new gstoreApi(Model);
-
-            expect(fn).throw(Error);
-        });
-
+    describe('api create()', () => {
         it('should throw error if no model, settings or router passed', () => {
-            let fn1 = () => new gstoreApi();
-            let fn2 = () => new gstoreApi({});
-            let fn3 = () => new gstoreApi({}, {});
+            const fn1 = () => apiBuilder.create();
+            const fn2 = () => apiBuilder.create({});
+            const fn3 = () => apiBuilder.create({}, {});
 
             expect(fn1).throw(Error);
             expect(fn2).throw(Error);
@@ -155,702 +113,679 @@ describe('Datastore API', function() {
         });
 
         it('should throw an error if path is not a String', () => {
-            let fn = () => new gstoreApi(Model, {path:{}});
+            const fn = () => apiBuilder.create(Model, { path: {} });
 
             expect(fn).throw(Error);
         });
 
         it('should set its Model', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            expect(dsApi.Model).equal(Model);
+            expect(routerRef.__gstoreApi.Model).equal(Model);
         });
 
         it('should create path if not passed', () => {
-            var dsApi = new gstoreApi(Model);
+            const routerRef = apiBuilder.create(Model);
 
-            expect(dsApi.settings.path).equal('/blog-posts');
+            expect(routerRef.__gstoreApi.settings.path).equal('/blog-posts');
         });
 
         it('should read settings from the Model Schema', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            expect(dsApi.settings.simplifyResult).be.false;
+            expect(routerRef.__gstoreApi.settings.showKey).equal(Model.schema.options.queries.showKey);
         });
 
         it('should read settings from general settings', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:'123'}, router);
+            const routerRef = apiBuilder.create(Model, { path: '/users', simplifyResult: '123' });
 
-            expect(dsApi.settings.simplifyResult).equal('123');
+            expect(routerRef.__gstoreApi.settings.simplifyResult).equal('123');
         });
     });
 
     describe('list()', () => {
-        var entities = [{id:123}];
+        const entities = [{ id: 123 }];
 
-        beforeEach(function() {
-            sinon.stub(Model, 'list', function(settings, cb) {
-                var args = [];
-                for (var i = 0; i < arguments.length; i++) {
-                    args.push(arguments[i]);
-                }
-                cb       = args.pop();
-                return cb(null, {
-                    entities : entities
-                });
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'list').resolves({ entities });
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.list.restore();
         });
 
         it('should read from general settings', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true});
+            const routerRef = apiBuilder.create(Model, { path: '/users', showKey: false });
 
-            dsApi.list(req, res);
-
-            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:true});
-            expect(res.json.getCall(0).args[0]).equal(entities);
+            return routerRef.__gstoreApi.list(req, res)
+                        .then(() => {
+                            expect(Model.list.getCall(0).args[0]).deep.equal({ showKey: false });
+                            expect(res.json.getCall(0).args[0]).equal(entities);
+                        });
         });
 
         it('should set Link Header if nextPageCursor', () => {
             Model.list.restore();
-            sinon.stub(Model, 'list', function(settings, cb) {
-                return cb(null, {
-                    nextPageCursor : 'abc123'
-                });
+            sinon.stub(Model, 'list').resolves({
+                nextPageCursor: 'abc123',
             });
             sinon.spy(res, 'set');
-            var dsApi = new gstoreApi(Model);
+            const routerRef = apiBuilder.create(Model);
 
-            dsApi.list(req, res);
+            return routerRef.__gstoreApi.list(req, res)
+                        .then(() => {
+                            expect(res.set.called).equal(true);
+                            expect(res.set.getCall(0).args[0]).equal('Link');
 
-            expect(res.set.called).be.true;
-            expect(res.set.getCall(0).args[0]).equal('Link');
-
-            res.set.restore();
+                            res.set.restore();
+                        });
         });
 
         it('should add start setting if pageCursor in request query', () => {
             req.query.pageCursor = 'abcd1234';
-            var dsApi = new gstoreApi(Model);
+            const routerRef = apiBuilder.create(Model);
 
-            dsApi.list(req, res);
+            routerRef.__gstoreApi.list(req, res);
 
-            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:false, start:'abcd1234'});
+            expect(Model.list.getCall(0).args[0]).deep.equal({ showKey: true, start: 'abcd1234' });
         });
 
         it('should read options', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    list : {
-                        options : {
-                            simplifyResult:true,
-                            limit : 13,
-                            order : {property: 'title', descending:true},
-                            select : 'name',
-                            ancestors : ['MyDad'],
-                            filters : ['paid', true]
-                        }
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    list: {
+                        options: {
+                            showKey: false,
+                            limit: 13,
+                            order: { property: 'title', descending: true },
+                            select: 'name',
+                            ancestors: ['MyDad'],
+                            filters: ['paid', true],
+                        },
+                    },
+                },
             };
-            var dsApi = new gstoreApi(Model, settings, router);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.list(req, res);
+            routerRef.__gstoreApi.list(req, res);
 
-            expect(Model.list.getCall(0).args[0]).deep.equal(settings.op.list.options);
+            expect(Model.list.getCall(0).args[0]).deep.equal(settings.operations.list.options);
         });
 
         it('should add ancestors to query', () => {
-            var settings1 = {
-                path:'/users',
-                ancestors : 'Dad',
-                op : {
-                    list : {
-                        options : {
-                            ancestors : ['MyDad']
-                        }
-                    }
-                }
+            const settings1 = {
+                path: '/users',
+                ancestors: 'Dad',
+                operations: {
+                    list: {
+                        options: {
+                            ancestors: ['MyDad'],
+                        },
+                    },
+                },
             };
-            var dsApi1 = new gstoreApi(Model, settings1, router);
+            const dsApi1 = apiBuilder.create(Model, settings1).__gstoreApi;
 
-            var settings2 = {
-                path:'/users',
-                ancestors : ['GrandFather', 'Dad']
+            const settings2 = {
+                path: '/users',
+                ancestors: ['GrandFather', 'Dad'],
             };
-            var dsApi2 = new gstoreApi(Model, settings2, router);
+            const dsApi2 = apiBuilder.create(Model, settings2).__gstoreApi;
 
-            var settings3 = {
-                path:'/users',
-                ancestors : ['GrandFather', 'Dad', 'Other']
+            const settings3 = {
+                path: '/users',
+                ancestors: ['GrandFather', 'Dad', 'Other'],
             };
-            var dsApi3 = new gstoreApi(Model, settings3, router);
+            const dsApi3 = apiBuilder.create(Model, settings3).__gstoreApi;
 
             dsApi1.list(req, res);
             dsApi2.list(req, res);
             dsApi3.list(req, res);
 
-            expect(Model.list.getCall(0).args[0]).deep.equal({simplifyResult:false, ancestors:['Dad', 'ancestor1']});
-            expect(Model.list.getCall(1).args[0]).deep.equal({simplifyResult:false, ancestors:['GrandFather', 'ancestor1', 'Dad', 'ancestor2']});
-            expect(Model.list.getCall(2).args[0]).deep.equal({simplifyResult:false, ancestors:['GrandFather', 'ancestor1', 'Dad', 'ancestor2']});
+            expect(Model.list.getCall(0).args[0])
+                .deep.equal({ showKey: true, ancestors: ['Dad', 'ancestor1'] });
+            expect(Model.list.getCall(1).args[0])
+                .deep.equal({ showKey: true, ancestors: ['GrandFather', 'ancestor1', 'Dad', 'ancestor2'] });
+            expect(Model.list.getCall(2).args[0])
+                .deep.equal({ showKey: true, ancestors: ['GrandFather', 'ancestor1', 'Dad', 'ancestor2'] });
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    list : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    list: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.list, 'fn');
-            var dsApi = new gstoreApi(Model, settings, router);
+            sinon.spy(settings.operations.list, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.list(req, res);
+            routerRef.__gstoreApi.list(req, res);
 
-            expect(settings.op.list.fn.called).be.true;
+            expect(settings.operations.list.handler.called).equal(true);
         });
 
         it('should deal with error', () => {
-            var error = {code:500, message:'Houston we got a problem'};
+            const error = { code: 500, message: 'Houston we got a problem' };
 
             Model.list.restore();
-            sinon.stub(Model, 'list', function(settings, cb) {
-                return cb(error);
-            });
+            sinon.stub(Model, 'list').rejects(error);
 
-            var dsApi = new gstoreApi(Model, {path:'/users'});
-            dsApi.list(req, res);
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
+            routerRef.__gstoreApi.list(req, res)
+                    .then(() => {
+                        const args = errorsHandler.rpcError.getCall(0).args;
+                        expect(args[0]).equal(error);
+                        expect(args[1]).equal(res);
+                    });
         });
     });
 
     describe('get()', () => {
-        beforeEach(function() {
-            sinon.stub(Model, 'get', function(id, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, entity);
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'get').resolves(entity);
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.get.restore();
         });
 
         it('should call get on Model', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            dsApi.get(req, res);
-
-            expect(Model.get.getCall(0).args[0]).deep.equal(123);
-            expect(res.json.getCall(0).args[0]).deep.equal(entity);
+            return routerRef.__gstoreApi.get(req, res)
+                    .then(() => {
+                        expect(Model.get.getCall(0).args[0]).deep.equal(123);
+                        expect(res.json.getCall(0).args[0]).deep.equal(entity.plain());
+                    });
         });
 
         it('should pass ancestors param', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', ancestors:'Dad'});
+            const routerRef = apiBuilder.create(Model, { path: '/users', ancestors: 'Dad' });
 
-            dsApi.get(req, res);
-
-            expect(Model.get.getCall(0).args[1]).deep.equal(['Dad', 'ancestor1']);
+            return routerRef.__gstoreApi.get(req, res)
+                    .then(() => {
+                        expect(Model.get.getCall(0).args[1]).deep.equal(['Dad', 'ancestor1']);
+                    });
         });
 
         it('should set simplifyResult from settings', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true}, router);
+            const routerRef = apiBuilder.create(Model, { path: '/users', simplifyResult: true });
 
-            dsApi.get(req, res);
-
-            expect(res.json.getCall(0).args[0]).deep.equal(entity.plain());
+            return routerRef.__gstoreApi.get(req, res)
+                        .then(() => {
+                            expect(res.json.getCall(0).args[0]).deep.equal(entity.plain());
+                        });
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    get : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    get: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.get, 'fn');
-            var dsApi = new gstoreApi(Model, settings, router);
+            sinon.spy(settings.operations.get, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.get(req, res);
+            routerRef.__gstoreApi.get(req, res);
 
-            expect(settings.op.get.fn.called).be.true;
+            expect(settings.operations.get.handler.called).equal(true);
         });
 
         it('should read options', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    get : {
-                        options : {readAll:true, simplifyResult:true}
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    get: {
+                        options: { readAll: true, showKey: false },
+                    },
+                },
             };
 
-            var dsApi = new gstoreApi(Model, settings, router);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.get(req, res);
-
-            expect(entity.plain.called).be.true;
-            expect(entity.plain.getCall(0).args[0]).deep.equal({readAll:true});
+            return routerRef.__gstoreApi.get(req, res)
+                        .then(() => {
+                            expect(entity.plain.called).equal(true);
+                            expect(entity.plain.getCall(0).args[0]).deep.equal({ readAll: true, showKey: false });
+                        });
         });
 
         it('should deal with error', () => {
-            var error = {code:500, message:'Houston we got a problem'};
+            const error = { code: 500, message: 'Houston we got a problem' };
             Model.get.restore();
-            sinon.stub(Model, 'get', function(settings, cb) {
-                return cb(error);
-            });
+            sinon.stub(Model, 'get').rejects(error);
 
-            var dsApi = new gstoreApi(Model, {path:'/users'});
-            dsApi.get(req, res);
-
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
+            return routerRef.__gstoreApi.get(req, res)
+                        .then(() => {
+                            const args = errorsHandler.rpcError.getCall(0).args;
+                            expect(args[0]).equal(error);
+                            expect(args[1]).equal(res);
+                        });
         });
     });
 
     describe('create()', () => {
-        var entity;
+        let myEntity;
 
         schema = new gstore.Schema({
-            title : {type:'stirng'}
+            title: { type: 'stirng' },
         }, {
-            queries : {
-                simplifyResult : false
-            }
+            queries: {
+                simplifyResult: false,
+            },
         });
 
         Model = gstore.model('Blog', schema);
 
-        var namespace = {Model: Model};
+        const namespace = { Model };
 
-        beforeEach(function() {
-            entity = new Model(req.body);
+        beforeEach(() => {
+            myEntity = new Model(req.body);
 
-            sinon.stub(entity, 'save', function(cb) {
-                return cb(null, entity);
-            });
+            sinon.stub(myEntity, 'save').resolves(myEntity);
+            sinon.stub(myEntity, 'plain').returns(0);
+            sinon.stub(namespace, 'Model').returns(myEntity);
 
-            sinon.stub(entity, 'plain').returns(0);
-
-            sinon.stub(namespace, 'Model', function() {
-                return entity;
-            });
-
-            namespace.Model.sanitize = function() {};
+            namespace.Model.sanitize = function sanitize() {};
         });
 
-        afterEach(function() {
-            entity.save.restore();
-            entity.plain.restore();
+        afterEach(() => {
+            myEntity.save.restore();
             namespace.Model.restore();
         });
 
         it('should call save on Model', () => {
-            var dsApi = new gstoreApi(namespace.Model, {path:'/users'});
+            const routerRef = apiBuilder.create(namespace.Model, { path: '/users' });
 
-            dsApi.create(req, res, entity);
-
-            expect(entity.save.called).be.true;
-            expect(res.json.called).be.true;
-            expect(entity.plain.called).be.false;
+            return routerRef.__gstoreApi.create(req, res)
+                    .then(() => {
+                        expect(myEntity.save.called).equal(true);
+                        expect(res.json.called).equal(true);
+                        expect(myEntity.plain.called).equal(true);
+                    });
         });
 
         it('should pass ancestors param', () => {
-            var dsApi = new gstoreApi(namespace.Model, {path:'/users', ancestors:['GrandFather', 'Dad']});
+            const routerRef = apiBuilder.create(namespace.Model, { path: '/users', ancestors: ['GrandFather', 'Dad'] });
 
-            dsApi.create(req, res);
+            routerRef.__gstoreApi.create(req, res);
 
             expect(namespace.Model.getCall(0).args[2]).deep.equal(['GrandFather', 'ancestor1', 'Dad', 'ancestor2']);
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    create : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    create: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.create, 'fn');
-            var dsApi = new gstoreApi(namespace.Model, settings, router);
+            sinon.spy(settings.operations.create, 'handler');
+            const routerRef = apiBuilder.create(namespace.Model, settings);
 
-            dsApi.create(req, res);
+            routerRef.__gstoreApi.create(req, res);
 
-            expect(settings.op.create.fn.called).be.true;
+            expect(settings.operations.create.handler.called).equal(true);
         });
 
         it('should read options', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    create : {
-                        options : {readAll:true, simplifyResult:true}
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    create: {
+                        options: { readAll: true, showKey: false },
+                    },
+                },
             };
 
-            var dsApi = new gstoreApi(namespace.Model, settings, router);
+            const routerRef = apiBuilder.create(namespace.Model, settings);
 
-            dsApi.create(req, res);
-
-            expect(entity.plain.called).be.true;
-            expect(entity.plain.getCall(0).args[0]).deep.equal({readAll:true});
+            return routerRef.__gstoreApi.create(req, res)
+                        .then(() => {
+                            expect(myEntity.plain.called).equal(true);
+                            expect(myEntity.plain.getCall(0).args[0]).deep.equal({ readAll: true, showKey: false });
+                        });
         });
 
         it('should deal with error', () => {
-            entity.save.restore();
-            var error = {code:500, message:'Houston we got a problem'};
+            myEntity.save.restore();
+            const error = { code: 500, message: 'Houston we got a problem' };
 
-            sinon.stub(entity, 'save', function(cb) {
-                return cb(error);
-            });
+            sinon.stub(myEntity, 'save').rejects(error);
 
-            var dsApi = new gstoreApi(namespace.Model, {path:'/users'});
-            dsApi.create(req, res);
+            const routerRef = apiBuilder.create(namespace.Model, { path: '/users' });
+            return routerRef.__gstoreApi.create(req, res)
+                        .then(() => {
+                            const args = errorsHandler.rpcError.getCall(0).args;
+                            expect(args[0]).equal(error);
+                            expect(args[1]).equal(res);
+                        });
+        });
 
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+        it('should return 500 if uploading file without handler', () => {
+            const req2 = extend(true, {}, req);
+            req2.file = new Buffer('string');
+            sinon.spy(res, 'status');
+
+            const routerRef = apiBuilder.create(namespace.Model);
+            routerRef.__gstoreApi.create(req2, res);
+
+            expect(res.status.called).equal(true);
+            expect(res.status.getCall(0).args[0]).equal(500);
         });
     });
 
     describe('updatePatch()', () => {
-        beforeEach(function() {
-            sinon.stub(Model, 'update', function(id, data, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, entity);
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'update').resolves(entity);
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.update.restore();
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    updatePatch : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    updatePatch: { handler: () => true },
+                },
             };
-            sinon.spy(settings.op.updatePatch, 'fn');
-            var dsApi = new gstoreApi(Model, settings);
+            sinon.spy(settings.operations.updatePatch, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.updatePatch(req, res);
+            routerRef.__gstoreApi.updatePatch(req, res);
 
-            expect(settings.op.updatePatch.fn.called).be.true;
+            expect(settings.operations.updatePatch.handler.called).equal(true);
         });
 
         it('should call update()', () => {
-            var dsApi = new gstoreApi(Model);
-            sinon.spy(dsApi, 'update');
+            const routerRef = apiBuilder.create(Model);
+            sinon.spy(routerRef.__gstoreApi, 'update');
 
-            dsApi.updatePatch(req, res);
+            routerRef.__gstoreApi.updatePatch(req, res);
 
-            expect(dsApi.update.getCall(0).args.length).equal(3);
-            expect(dsApi.update.getCall(0).args[0]).equal(req);
-            expect(dsApi.update.getCall(0).args[1]).equal(res);
-            expect(dsApi.update.getCall(0).args[2]).not.exist;
+            expect(routerRef.__gstoreApi.update.getCall(0).args.length).equal(3);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[0]).equal(req);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[1]).equal(res);
+            assert.isUndefined(routerRef.__gstoreApi.update.getCall(0).args[2]);
         });
 
         it('should pass options', () => {
-            var dsApi = new gstoreApi(Model, {
-                op : {
-                    updatePatch : {
-                        options : {readAll:true, simplifyResult:true}
-                    }
-                }
+            const routerRef = apiBuilder.create(Model, {
+                operations: {
+                    updatePatch: {
+                        options: { readAll: true, simplifyResult: true },
+                    },
+                },
             });
-            sinon.spy(dsApi, 'update');
+            sinon.spy(routerRef.__gstoreApi, 'update');
 
-            dsApi.updatePatch(req, res);
+            routerRef.__gstoreApi.updatePatch(req, res);
 
-            expect(dsApi.update.getCall(0).args.length).equal(3);
-            expect(dsApi.update.getCall(0).args[2]).deep.equal({readAll:true, simplifyResult:true});
+            expect(routerRef.__gstoreApi.update.getCall(0).args.length).equal(3);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[2]).deep.equal({ readAll: true, simplifyResult: true });
         });
     });
 
     describe('updateReplace()', () => {
-        beforeEach(function() {
-            sinon.stub(Model, 'update', function(id, data, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, entity);
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'update').resolves(entity);
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.update.restore();
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    updateReplace : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    updateReplace: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.updateReplace, 'fn');
-            var dsApi = new gstoreApi(Model, settings);
+            sinon.spy(settings.operations.updateReplace, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.updateReplace(req, res);
+            routerRef.__gstoreApi.updateReplace(req, res);
 
-            expect(settings.op.updateReplace.fn.called).be.true;
+            expect(settings.operations.updateReplace.handler.called).equal(true);
         });
 
         it('should call update()', () => {
-            var dsApi = new gstoreApi(Model);
-            sinon.spy(dsApi, 'update');
+            const routerRef = apiBuilder.create(Model);
+            sinon.spy(routerRef.__gstoreApi, 'update');
 
-            dsApi.updateReplace(req, res);
+            routerRef.__gstoreApi.updateReplace(req, res);
 
-            expect(dsApi.update.getCall(0).args.length).equal(3);
-            expect(dsApi.update.getCall(0).args[0]).equal(req);
-            expect(dsApi.update.getCall(0).args[1]).equal(res);
-            expect(dsApi.update.getCall(0).args[2]).deep.equal({replace:true});
+            expect(routerRef.__gstoreApi.update.getCall(0).args.length).equal(3);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[0]).equal(req);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[1]).equal(res);
+            expect(routerRef.__gstoreApi.update.getCall(0).args[2]).deep.equal({ replace: true });
         });
 
         it('should pass options', () => {
-            var dsApi = new gstoreApi(Model, {
-                op : {
-                    updateReplace : {
-                        options : {readAll:true, simplifyResult:true}
-                    }
-                }
+            const routerRef = apiBuilder.create(Model, {
+                operations: {
+                    updateReplace: {
+                        options: { readAll: true, simplifyResult: true },
+                    },
+                },
             });
-            sinon.spy(dsApi, 'update');
+            sinon.spy(routerRef.__gstoreApi, 'update');
 
-            dsApi.updateReplace(req, res);
+            routerRef.__gstoreApi.updateReplace(req, res);
 
-            expect(dsApi.update.getCall(0).args[2]).deep.equal({replace:true, readAll:true, simplifyResult:true});
+            expect(routerRef.__gstoreApi.update.getCall(0).args[2]).deep.equal({ replace: true, readAll: true, simplifyResult: true });
         });
     });
 
     describe('update()', () => {
-        beforeEach(function() {
-            sinon.stub(Model, 'update', function(id, data, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, entity);
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'update').resolves(entity);
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.update.restore();
         });
 
         it('should call update on Model', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            dsApi.update(req, res);
+            routerRef.__gstoreApi.update(req, res);
 
             expect(Model.update.getCall(0).args[0]).equal(123);
         });
 
         it('should pass ancestors param', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', ancestors:'Dad'});
+            const routerRef = apiBuilder.create(Model, { path: '/users', ancestors: 'Dad' });
 
-            dsApi.update(req, res);
+            routerRef.__gstoreApi.update(req, res);
 
             expect(Model.update.getCall(0).args[2]).deep.equal(['Dad', 'ancestor1']);
         });
 
-        it('should set simplifyResult from settings', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true}, router);
+        it('should read "showKey" from settings', () => {
+            const routerRef = apiBuilder.create(Model, { path: '/users', showKey: false });
 
-            dsApi.update(req, res);
-
-            expect(res.json.getCall(0).args[0]).deep.equal(entity.plain());
+            return routerRef.__gstoreApi.update(req, res)
+                    .then(() => {
+                        expect(res.json.getCall(0).args[0]).deep.equal(entity.plain());
+                        expect(entity.plain.getCall(0).args[0]).deep.equal({ readAll: false, showKey: false });
+                    });
         });
 
         it('should read options', () => {
-            var dsApi = new gstoreApi(Model);
+            const routerRef = apiBuilder.create(Model);
 
-            dsApi.update(req, res, {replace:true, readAll:true, simplifyResult:true});
-
-            expect(entity.plain.called).be.true;
-            expect(entity.plain.getCall(0).args[0]).deep.equal({readAll:true});
-            expect(Model.update.getCall(0).args[5]).deep.equal({replace:true});
+            return routerRef.__gstoreApi.update(req, res, { replace: true, readAll: true, showKey: false })
+                        .then(() => {
+                            expect(entity.plain.called).equal(true);
+                            expect(entity.plain.getCall(0).args[0]).deep.equal({ readAll: true, showKey: false });
+                            expect(Model.update.getCall(0).args[5]).deep.equal({ replace: true });
+                        });
         });
 
         it('should deal with error', () => {
-            var error = {code:500, message:'Houston we got a problem'};
+            const error = { code: 500, message: 'Houston we got a problem' };
             Model.update.restore();
-            sinon.stub(Model, 'update', function(id, data, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(error);
-            });
+            sinon.stub(Model, 'update').rejects(error);
 
-            var dsApi = new gstoreApi(Model, {path:'/users'});
-            dsApi.update(req, res);
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+            return routerRef.__gstoreApi.update(req, res)
+                        .then(() => {
+                            const args = errorsHandler.rpcError.getCall(0).args;
+                            expect(args[0]).equal(error);
+                            expect(args[1]).equal(res);
+                        });
         });
     });
 
     describe('delete()', () => {
-        beforeEach(function() {
-            sinon.stub(Model, 'delete', function(id, cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, {success:true});
-            });
+        beforeEach(() => {
+            sinon.stub(Model, 'delete').resolves({ success: true });
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.delete.restore();
         });
 
         it('should call delete on Model', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            dsApi._delete(req, res);
-
-            expect(Model.delete.getCall(0).args[0]).equal(123);
-            expect(res.json.getCall(0).args[0].success).be.true;
+            return routerRef.__gstoreApi._delete(req, res)
+                        .then(() => {
+                            expect(Model.delete.getCall(0).args[0]).equal(123);
+                            expect(res.json.getCall(0).args[0].success).equal(true);
+                        });
         });
 
         it('should pass ancestors param', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', ancestors:['GranDad', 'Dad']});
+            const routerRef = apiBuilder.create(Model, { path: '/users', ancestors: ['GranDad', 'Dad'] });
 
-            dsApi._delete(req, res);
+            routerRef.__gstoreApi._delete(req, res);
 
             expect(Model.delete.getCall(0).args[1]).deep.equal(['GranDad', 'ancestor1', 'Dad', 'ancestor2']);
         });
 
         it('should set success to false if no entity deleted', () => {
             Model.delete.restore();
-            sinon.stub(Model, 'delete', function(id, cb) {
-                return cb(null, {success:false});
-            });
-            var dsApi = new gstoreApi(Model, {path:'/users', simplifyResult:true}, router);
+            sinon.stub(Model, 'delete').resolves({ success: false });
+            const routerRef = apiBuilder.create(Model, { path: '/users', simplifyResult: true });
 
-            dsApi._delete(req, res);
-
-            expect(res.json.getCall(0).args[0].success).be.false;
+            return routerRef.__gstoreApi._delete(req, res)
+                        .then(() => {
+                            expect(res.json.getCall(0).args[0].success).equal(false);
+                        });
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    delete : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    delete: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.delete, 'fn');
-            var dsApi = new gstoreApi(Model, settings, router);
+            sinon.spy(settings.operations.delete, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi._delete(req, res);
+            routerRef.__gstoreApi._delete(req, res);
 
-            expect(settings.op.delete.fn.called).be.true;
+            expect(settings.operations.delete.handler.called).equal(true);
         });
 
         it('should deal with error', () => {
-            var error = {code:500, message:'Houston we got a problem'};
+            const error = { code: 500, message: 'Houston we got a problem' };
             Model.delete.restore();
-            sinon.stub(Model, 'delete', function(id, cb) {
-                return cb(error);
-            });
+            sinon.stub(Model, 'delete').rejects(error);
 
-            var dsApi = new gstoreApi(Model, {path:'/users'});
-            dsApi._delete(req, res);
-
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
+            return routerRef.__gstoreApi._delete(req, res)
+                        .then(() => {
+                            const args = errorsHandler.rpcError.getCall(0).args;
+                            expect(args[0]).equal(error);
+                            expect(args[1]).equal(res);
+                        });
         });
     });
 
     describe('deleteAll()', () => {
-        var result = {};
-        beforeEach(function() {
-            sinon.stub(Model, 'deleteAll', function(cb) {
-                let args = Array.prototype.slice.apply(arguments);
-                cb = args.pop();
-                return cb(null, result);
-            });
+        const result = {};
+        beforeEach(() => {
+            sinon.stub(Model, 'deleteAll').resolves(result);
         });
 
-        afterEach(function() {
+        afterEach(() => {
             Model.deleteAll.restore();
         });
 
         it('should call delete on Model', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            dsApi.deleteAll(req, res);
-
-            expect(Model.deleteAll.called).be.true;
-            expect(res.json.getCall(0).args[0]).equal(result);
+            return routerRef.__gstoreApi.deleteAll(req, res)
+                        .then(() => {
+                            expect(Model.deleteAll.called).equal(true);
+                            expect(res.json.getCall(0).args[0]).equal(result);
+                        });
         });
 
         it('should pass ancestors param', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users', ancestors:'Dad'});
+            const routerRef = apiBuilder.create(Model, { path: '/users', ancestors: 'Dad' });
 
-            dsApi.deleteAll(req, res);
+            routerRef.__gstoreApi.deleteAll(req, res);
 
             expect(Model.deleteAll.getCall(0).args[0]).deep.equal(['Dad', 'ancestor1']);
         });
 
         it('should execute action from settings', () => {
-            var settings = {
-                path:'/users',
-                op : {
-                    deleteAll : {
-                        fn : () => true
-                    }
-                }
+            const settings = {
+                path: '/users',
+                operations: {
+                    deleteAll: {
+                        handler: () => true,
+                    },
+                },
             };
-            sinon.spy(settings.op.deleteAll, 'fn');
-            var dsApi = new gstoreApi(Model, settings, router);
+            sinon.spy(settings.operations.deleteAll, 'handler');
+            const routerRef = apiBuilder.create(Model, settings);
 
-            dsApi.deleteAll(req, res);
+            routerRef.__gstoreApi.deleteAll(req, res);
 
-            expect(settings.op.deleteAll.fn.called).be.true;
+            expect(settings.operations.deleteAll.handler.called).equal(true);
         });
 
         it('should deal with error', () => {
-            var error = {code:500, message:'Houston we got a problem'};
+            const error = { code: 500, message: 'Houston we got a problem' };
             Model.deleteAll.restore();
-            sinon.stub(Model, 'deleteAll', function(cb) {
-                return cb(error);
-            });
+            sinon.stub(Model, 'deleteAll').rejects(error);
 
-            var dsApi = new gstoreApi(Model, {path:'/users'});
-            dsApi.deleteAll(req, res);
-
-            var args = errorsHandler.rpcError.getCall(0).args;
-            expect(args[0]).equal(error);
-            expect(args[1]).equal(res);
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
+            return routerRef.__gstoreApi.deleteAll(req, res)
+                        .then(() => {
+                            const args = errorsHandler.rpcError.getCall(0).args;
+                            expect(args[0]).equal(error);
+                            expect(args[1]).equal(res);
+                        });
         });
     });
 
     describe('routes', () => {
-        beforeEach(function() {
+        beforeEach(() => {
             sinon.spy(apiRoute, 'get');
             sinon.spy(apiRoute, 'post');
             sinon.spy(apiRoute, 'put');
@@ -858,7 +793,7 @@ describe('Datastore API', function() {
             sinon.spy(apiRoute, 'delete');
         });
 
-        afterEach(function() {
+        afterEach(() => {
             apiRoute.get.restore();
             apiRoute.post.restore();
             apiRoute.put.restore();
@@ -867,16 +802,17 @@ describe('Datastore API', function() {
         });
 
         it('--> define 6 operations', () => {
-            var dsApi = new gstoreApi(Model, apiDefaultSettings);
+            /* eslint-disable no-unused-vars */
+            const routerRef = apiBuilder.create(Model, apiDefaultSettings);
 
             expect(router.route.callCount).equal(6);
             expect(apiRoute.delete.callCount).equal(1);
         });
 
         it('--> define all 7 operations if deleteAll exec set to "true"', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                op:{deleteAll:{exec:true}}
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                operations: { deleteAll: { exec: true } },
             });
 
             expect(router.route.callCount).equal(7);
@@ -884,65 +820,65 @@ describe('Datastore API', function() {
         });
 
         it('--> no define any operations', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                op : {
-                    list:          {exec: false},
-                    get:           {exec: false},
-                    create:        {exec: false},
-                    updatePatch:   {exec: false},
-                    updateReplace: {exec: false},
-                    delete:        {exec: false}
-                }
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                operations: {
+                    list: { exec: false },
+                    get: { exec: false },
+                    create: { exec: false },
+                    updatePatch: { exec: false },
+                    updateReplace: { exec: false },
+                    delete: { exec: false },
+                },
             });
 
             expect(router.route.callCount).equal(0);
         });
 
         it('should set path', () => {
-            var dsApi = new gstoreApi(Model, {path:'/users'});
+            const routerRef = apiBuilder.create(Model, { path: '/users' });
 
-            expect(router.route.getCall(0).args[0]).equal('/public/users');
-            expect(router.route.getCall(1).args[0]).equal('/public/users/:id');
+            expect(router.route.getCall(0).args[0]).equal('/users');
+            expect(router.route.getCall(1).args[0]).equal('/users/:id');
         });
 
         it('should add ancestors to path (1)', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                ancestors : ['GrandFather', 'Dad']
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                ancestors: ['GrandFather', 'Dad'],
             });
 
-            expect(router.route.getCall(1).args[0]).equal('/public/grand-fathers/:anc0ID/dads/:anc1ID/users/:id');
+            expect(router.route.getCall(1).args[0]).equal('/grand-fathers/:anc0ID/dads/:anc1ID/users/:id');
         });
 
         it('should add ancestors to path (2)', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                ancestors : ['grand-Father', 'MyDad-1']
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                ancestors: ['grand-Father', 'MyDad-1'],
             });
 
-            expect(router.route.getCall(1).args[0]).equal('/public/grand-fathers/:anc0ID/my-dad-1S/:anc1ID/users/:id');
+            expect(router.route.getCall(1).args[0]).equal('/grand-fathers/:anc0ID/my-dad-1S/:anc1ID/users/:id');
         });
 
         it('should add prefix to path', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                op : {
-                    list: {path:{prefix:'/myprefix'}},
-                    get:  {path:{prefix:'/myprefix'}}
-                }
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                operations: {
+                    list: { path: { prefix: '/myprefix' } },
+                    get: { path: { prefix: '/myprefix' } },
+                },
             });
             expect(router.route.getCall(0).args[0]).equal('/myprefix/users');
             expect(router.route.getCall(1).args[0]).equal('/myprefix/users/:id');
         });
 
         it('should allow array of prefixes', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                op : {
-                    list: {path:{prefix:['/myprefix1', '/myprefix2']}},
-                    get:  {path:{prefix:['/myprefix1', '/myprefix2']}}
-                }
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                operations: {
+                    list: { path: { prefix: ['/myprefix1', '/myprefix2'] } },
+                    get: { path: { prefix: ['/myprefix1', '/myprefix2'] } },
+                },
             });
             expect(router.route.getCall(0).args[0]).equal('/myprefix1/users');
             expect(router.route.getCall(1).args[0]).equal('/myprefix2/users');
@@ -951,107 +887,140 @@ describe('Datastore API', function() {
         });
 
         it('should add suffix to path', () => {
-            var dsApi = new gstoreApi(Model, {
-                path:'/users',
-                op : {
-                    list: {path:{suffix:'/mysufix'}},
-                    get:  {path:{suffix:'/mysufix'}}
-                }
+            const routerRef = apiBuilder.create(Model, {
+                path: '/users',
+                operations: {
+                    list: { path: { suffix: '/mysufix' } },
+                    get: { path: { suffix: '/mysufix' } },
+                },
             });
-            expect(router.route.getCall(0).args[0]).equal('/public/users/mysufix');
-            expect(router.route.getCall(1).args[0]).equal('/public/users/:id/mysufix');
+            expect(router.route.getCall(0).args[0]).equal('/users/mysufix');
+            expect(router.route.getCall(1).args[0]).equal('/users/:id/mysufix');
         });
 
-        it('should add LIST middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                path:'/users',
-                op : {
-                    list:   {middelware: middelware},
-                }
+        it('should add LIST middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                path: '/users',
+                operations: {
+                    list: { middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args = apiRoute.get.getCall(0).args;
-            expect(args[0][0]).equal(middelware);
+            const args = apiRoute.get.getCall(0).args;
+            expect(args[0]).equal(middleware);
         });
 
-        it('should add GET middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                path:'/users',
-                op : {
-                    get: {middelware: middelware}
-                }
+        it('should add GET middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                path: '/users',
+                operations: {
+                    get: { middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args = apiRoute.get.getCall(1).args;
-            expect(args[0][0]).equal(middelware);
+            const args = apiRoute.get.getCall(1).args;
+            expect(args[0]).equal(middleware);
         });
 
-        it('should add CREATE middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                path:'/users',
-                op : {
-                    create: {middelware: middelware}
-                }
+        it('should add CREATE middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                path: '/users',
+                operations: {
+                    create: { middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args = apiRoute.post.getCall(0).args;
-            expect(args[0][0]).equal(middelware);
+            const args = apiRoute.post.getCall(0).args;
+            expect(args[1]).equal(middleware);
         });
 
-        it('should add UPDATE middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                op : {
-                    updatePatch: {middelware: middelware},
-                    updateReplace: {middelware: middelware}
-                }
+        it('should add UPDATE middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                operations: {
+                    updatePatch: { middleware },
+                    updateReplace: { middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args1 = apiRoute.patch.getCall(0).args;
-            var args2 = apiRoute.put.getCall(0).args;
-            expect(args1[0][0]).equal(middelware);
-            expect(args2[0][0]).equal(middelware);
+            const args1 = apiRoute.patch.getCall(0).args;
+            const args2 = apiRoute.put.getCall(0).args;
+            expect(args1[1]).equal(middleware);
+            expect(args2[1]).equal(middleware);
         });
 
-        it('should add DELETE middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                path:'/users',
-                op : {
-                    delete: {middelware: middelware}
-                }
+        it('should add DELETE middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                path: '/users',
+                operations: {
+                    delete: { middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args = apiRoute.delete.getCall(0).args;
-            expect(args[0][0]).equal(middelware);
+            const args = apiRoute.delete.getCall(0).args;
+            expect(args[0]).equal(middleware);
         });
 
-        it('should add DELETE_ALL middelware', () => {
-            var middelware = () => true;
-            var settings = {
-                path:'/users',
-                op : {
-                    deleteAll: {exec:true, middelware: middelware}
-                }
+        it('should add DELETE_ALL middleware', () => {
+            const middleware = () => true;
+            const settings = {
+                path: '/users',
+                operations: {
+                    deleteAll: { exec: true, middleware },
+                },
             };
 
-            new gstoreApi(Model, settings);
+            const routerRef = apiBuilder.create(Model, settings);
 
-            var args = apiRoute.delete.getCall(1).args;
-            expect(args[0][0]).equal(middelware);
+            const args = apiRoute.delete.getCall(1).args;
+            expect(args[0]).equal(middleware);
+        });
+    });
+
+    describe('should allow settings()', () => {
+        // it('should throw an error if no settings (or settings not object) passed', () => {
+        //     const fn1 = () => apiapiRef.default();
+        //     const fn2 = () => apiapiRef.default('string');
+
+        //     expect(fn1).throw(Error);
+        //     expect(fn2).throw(Error);
+        // });
+
+        it('and override defaults', () => {
+            delete require.cache[path.resolve('lib/index.js')];
+
+            const settings = {
+                host: 'http://api.my-host.com/',
+                contexts: {
+                    public: '/public',
+                    private: '/private',
+                },
+                readAll: true,
+                showKey: true,
+            };
+
+            // apiapiRef.default(settings);
+            /* eslint-disable */
+            gstoreApi = require('../lib')(settings);
+            /* eslint-enable */
+            apiBuilder = gstoreApi.express(router);
+
+            const routerRef = apiBuilder.create(Model);
+            expect(routerRef.__gstoreApi.settings).deep.equal(Object.assign(settings, { path: '/blog-posts' }));
         });
     });
 });
