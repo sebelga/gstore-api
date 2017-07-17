@@ -79,9 +79,11 @@ describe('Datastore API', () => {
             status: () => ({ json: () => {}, send: () => {} }),
             set: () => {},
             json: () => {},
+            location: () => {},
         };
 
         sinon.spy(res, 'json');
+        sinon.spy(res, 'location');
         sinon.spy(errorsHandler, 'rpcError');
         sinon.spy(entity, 'plain');
     });
@@ -89,6 +91,7 @@ describe('Datastore API', () => {
     afterEach(() => {
         router.route.restore();
         res.json.restore();
+        res.location.restore();
         errorsHandler.rpcError.restore();
         entity.plain.restore();
     });
@@ -408,6 +411,7 @@ describe('Datastore API', () => {
             return routerRef.__gstoreApi.create(req, res)
                     .then(() => {
                         expect(myEntity.save.called).equal(true);
+                        expect(res.location.called).equal(true);
                         expect(res.json.called).equal(true);
                         expect(myEntity.plain.called).equal(true);
                     });
