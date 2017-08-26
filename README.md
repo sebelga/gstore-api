@@ -14,6 +14,7 @@ It is built on top of [gcloud-node](https://github.com/GoogleCloudPlatform/gclou
 - [Motivation](#motivation)
 - [Installation](#installation)
 - [What do I get from it?](#what-do-i-get-from-it)
+- [Demo Application](#demo-application)
 - [Getting Started](#getting-started)
   - [settings](#settings)
 - [Create an API for an Entity](#create-an-api-for-an-entity)
@@ -71,6 +72,12 @@ app.use('/api/v1', blogPostApi);
 // DELETE /api/v1/blog-posts/:id -- delete a BlogPost
 
 ```
+
+-----
+
+## Demo Application
+
+Inside the "example" folder you will find a running application to demostrate how to use gstore-api. Follow the instruction in the [README](./example/README.md) file.
 
 -----
 

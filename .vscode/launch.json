@@ -7,6 +7,20 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Example app",
+            "runtimeExecutable": "nodemon",
+            "cwd": "${workspaceRoot}/example",
+            "program": "${workspaceRoot}/example/app/server.js",
+            "restart": true,
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "env": {
+                "NODE_ENV": "development"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceRoot}\\index.js"
         },
