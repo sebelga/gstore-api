@@ -5,17 +5,17 @@ Small application to demostrate how to use gstore-api
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [gstore-api App example](#gstore-api-app-example)
-  - [Launch the app](#launch-the-app)
-  - [What does it do](#what-does-it-do)
-    - [Test the API](#test-the-api)
-      - [List all users](#list-all-users)
-      - [Get a user](#get-a-user)
-      - [Create a user](#create-a-user)
-      - [Update a user](#update-a-user)
-      - [Delete a user](#delete-a-user)
-      - [Delete ALL users](#delete-all-users)
-    - [User login](#user-login)
+
+- [Launch the app](#launch-the-app)
+- [What does it do](#what-does-it-do)
+- [Test the API](#test-the-api)
+  - [List all users](#list-all-users)
+  - [Get a user](#get-a-user)
+  - [Create a user](#create-a-user)
+  - [Update a user](#update-a-user)
+  - [Delete a user](#delete-a-user)
+  - [Delete ALL users](#delete-all-users)
+- [User login (auth)](#user-login-auth)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -48,19 +48,19 @@ NODE_ENV=development nodemon app/server.js
 
 Once the server is launched you can access it at `http://localhost:3007`.
 
-### Test the API
+## Test the API
 
 To test the API I recommend [Postman](https://www.getpostman.com/) but any API tool will do.
 
-#### List all users
+### List all users
 
 `GET /api/v1/users`
 
-#### Get a user
+### Get a user
 
 `GET /api/v1/users/{id}`
 
-#### Create a user
+### Create a user
 
 `POST /api/v1/users`
 
@@ -72,28 +72,36 @@ Here you can either just pass a raw JSON object with the following properties (d
 - lastname
 - email
 
-Or you can also **upload a file** (simulated in the modules/user/user.controller.js) by setting the body type of the Request to *form-data* and add a "profilePict" field (of type **File**). As the username and password are required you also need to pass a "username" and "password" field (of type **Text**).
+Or you can create user by **uploadding a profile picture** (simulated in the modules/user/user.controller.js) by setting the body type of the Request to *form-data*.  
+You can now pass a "profilePict" property of type **File**.
 
-#### Update a user
+- username (required)
+- password (required)
+- profilePict (*File* type)
+- firstname
+- lastname
+- email
+
+### Update a user
 
 `PATCH /api/v1/users/{id}`
 
 Modify the properties of a specific User. 
 Like with "create" above you can either update the user by sending a raw JSON object, or also by uploading a file (through form-data fields).
 
-#### Delete a user
+### Delete a user
 
 `DELETE /api/v1/users/{id}`
 
 Delete a User at the specific id.
 
-#### Delete ALL users
+### Delete ALL users
 
 `DELETE /api/v1/users`
 
 Delete all the users in the Datastore.
 
-### User login
+## User login (auth)
 
 The demo application also shows you how you can login a user with the following route:  
 
